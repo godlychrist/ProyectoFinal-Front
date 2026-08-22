@@ -1,0 +1,67 @@
+import { ref } from 'vue'
+
+export const useAuth = () => {
+
+    const loading = ref(false)
+    const error = ref<string | null>(null)
+    const tokenCookie = useCookie('auth_token') // Guarda el token en el navegador
+
+
+    const register = async (userData: { name: string, email: string, password: string, role: string }) => {
+        loading.value = true
+        error.value = null
+
+        try {
+            const data = await $fetch('http://localhost:4000/api/auth/register', {
+                method: 'POST',
+                body: userData
+            })
+
+            return { ok: true, data }
+
+        } catch (err: any) {
+            error.value = err.data?.message || 'Error al registrar el usuario'
+            return { ok: false, error: error.value }
+
+        } finally {
+            loading.value = false
+        }
+    }
+
+    const login = async (credentials: { email: string, password: string }) => {
+        loading.value = true
+        error.value = null
+
+        try {
+            const data = await $fetch<any>('http://localhost:4000/api/auth/login', {
+                method: 'POST', // En GET no se manda el body
+                body: credentials
+            })
+            // Guarda el token que devolvió el servidor
+            if (data?.data?.token) {
+                tokenCookie.value = data.data.token
+            }
+
+            return { ok: true, data }
+        } catch (err: any) {
+            error.value = err.data?.message || 'Error al iniciar sesion'
+            return { ok: false, error: error.value }
+        } finally {
+            loading.value = false
+        }
+    }
+
+    const logout = () => {
+        tokenCookie.value = null
+        navigateTo('/auth/login')
+    }
+
+    return {
+        register,
+        login,
+        logout,
+        token: tokenCookie,
+        loading,
+        error
+    }
+}
