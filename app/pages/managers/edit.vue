@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue'
 
+definePageMeta({
+  middleware: 'auth'
+})
+
 // 1. Traemos la ruta actual y las funciones del composable
 const route = useRoute()
 const { getEventById, updateEvent, getCategories, loading, error } = useEvents()

@@ -1,5 +1,69 @@
 <script setup lang="ts">
+import { ref, onMounted, computed } from 'vue'
+
 const { logout } = useAuth()
+const { getEvents, getMyNotifications, markNotificationAsRead, loading, error } = useEvents()
+const { isOnline } = useNetworkStatus()
+const events = ref<any[]>([])
+const notifications = ref<any[]>([])
+
+const loadNotifications = async () => {
+  const res = await getMyNotifications()
+  if (res.ok) {
+    notifications.value = res.data
+  }
+}
+
+onMounted(async() => {
+  const res = await getEvents()
+  if(res.ok) {
+    events.value = res.data
+  }
+  await loadNotifications()
+})
+
+// 1. Guardamos los IDs de favoritos e inscripciones en cookies reactivas
+const favorites = useCookie<string[]>('user_favorites', { default: () => [] })
+const registeredEvents = useCookie<string[]>('user_registered_events', { default: () => [] })
+
+// 2. Estado de la pestaña activa ('all' = Todas, 'registered' = Mis Inscripciones, 'favorites' = Guardadas)
+const selectedTab = ref('all')
+
+// 3. Función para dar/quitar Favorito
+const toggleFavorite = (eventId: string) => {
+  const index = favorites.value.indexOf(eventId)
+  if (index === -1) {
+    favorites.value.push(eventId)
+  } else {
+    favorites.value.splice(index, 1)
+  }
+}
+
+// 5. Lista filtrada según la pestaña que el usuario presione
+const displayedEvents = computed(() => {
+  if (selectedTab.value === 'registered') {
+    return events.value.filter(e => registeredEvents.value.includes(e._id))
+  }
+  if (selectedTab.value === 'favorites') {
+    return events.value.filter(e => favorites.value.includes(e._id))
+  }
+  return events.value
+})
+
+// 6. Formatear fechas
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return 'Sin fecha'
+  return new Date(dateStr).toLocaleDateString('es-ES', { 
+    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+  })
+}
+
+
+definePageMeta({
+  middleware: 'auth'
+})
+
+
 </script>
 
 <template>
@@ -27,7 +91,7 @@ const { logout } = useAuth()
         </div>
 
         <div class="profile-actions">
-          <NuxtLink to="/actividades" class="btn-primary-action">
+          <NuxtLink to="/activities" class="btn-primary-action">
             <span>Explorar Actividades</span>
             <span>→</span>
           </NuxtLink>
@@ -44,7 +108,7 @@ const { logout } = useAuth()
             <span>🎟️</span>
           </div>
           <div class="stat-data">
-            <span class="stat-value">3</span>
+            <span class="stat-value">{{ registeredEvents.length }}</span>
             <span class="stat-label">Inscripciones Activas</span>
           </div>
         </div>
@@ -54,28 +118,18 @@ const { logout } = useAuth()
             <span>❤️</span>
           </div>
           <div class="stat-data">
-            <span class="stat-value">6</span>
+            <span class="stat-value">{{ favorites.length }}</span>
             <span class="stat-label">Eventos Favoritos</span>
           </div>
         </div>
 
         <div class="stat-card">
           <div class="stat-icon-wrap icon-blue">
-            <span>🏆</span>
+            <span>📅</span>
           </div>
           <div class="stat-data">
-            <span class="stat-value">12</span>
-            <span class="stat-label">Horas de Comunidad</span>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon-wrap icon-emerald">
-            <span>📶</span>
-          </div>
-          <div class="stat-data">
-            <span class="stat-value">PWA</span>
-            <span class="stat-label">Sincronizado Offline <span class="badge-wip">WIP</span></span>
+            <span class="stat-value">{{ events.length }}</span>
+            <span class="stat-label">Actividades Disponibles</span>
           </div>
         </div>
       </section>
@@ -89,48 +143,59 @@ const { logout } = useAuth()
               <span class="sub-tag">Tu Agenda</span>
               <h2 class="block-title">Mis Próximas Actividades</h2>
             </div>
-            <div class="filter-tabs">
-              <button class="tab-btn active">Próximas (3)</button>
-              <button class="tab-btn">Pasadas</button>
-              <button class="tab-btn">Guardadas</button>
-            </div>
+          <div class="filter-tabs">
+              <button :class="['tab-btn', { active: selectedTab === 'all' }]" @click="selectedTab = 'all'">
+                Todas ({{ events.length }})
+              </button>
+              <button :class="['tab-btn', { active: selectedTab === 'registered' }]" @click="selectedTab = 'registered'">
+                Mis Inscripciones ({{ registeredEvents.length }})
+              </button>
+              <button :class="['tab-btn', { active: selectedTab === 'favorites' }]" @click="selectedTab = 'favorites'">
+                Favoritos ({{ favorites.length }})
+              </button>
+          </div>
           </div>
 
-          <div class="events-list">
-            <!-- Evento 1 -->
-            <article class="ticket-card">
+
+          <!-- Lista de Actividades -->
+          <div v-if="displayedEvents.length > 0" class="events-list">
+            <article v-for="ev in displayedEvents" :key="ev._id" class="ticket-card">
               <div class="ticket-status-line"></div>
               <div class="ticket-body">
                 <div class="ticket-top">
-                  <span class="badge-category">💻 Tecnología</span>
-                  <span class="ticket-confirmed-badge">✓ Confirmado</span>
+                  <span class="badge-category">{{ ev.category?.name || 'Comunidad' }}</span>
+                  
+                  <!-- Botón de Favorito ❤️ -->
+                  <button class="fav-icon-btn" @click="toggleFavorite(ev._id)">
+                    {{ favorites.includes(ev._id) ? '❤️' : '🤍' }}
+                  </button>
                 </div>
-                <h3 class="event-title">Workshop de Nuxt 4 & Vue 3 Full-Stack</h3>
+                <h3 class="event-title">{{ ev.title }}</h3>
+                <p class="event-desc-short">{{ ev.description }}</p>
                 <div class="event-details">
                   <div class="detail-row">
                     <span class="detail-icon">📅</span>
-                    <span>15 Sep 2026 • 18:00 - 20:30</span>
+                    <span>{{ formatDate(ev.startDate) }}</span>
                   </div>
                   <div class="detail-row">
                     <span class="detail-icon">📍</span>
-                    <span>Auditorio Central / Online</span>
+                    <span>{{ ev.location }}</span>
                   </div>
                 </div>
-                <div class="qr-preview-box">
-                  <span class="qr-icon">📱</span>
-                  <span>Boleto digital guardado en caché PWA</span>
-                </div>
               </div>
+              <!-- Botones de Acción -->
               <div class="card-side-actions">
-                <NuxtLink to="/actividades" class="btn-view-ticket">
-                  Ver Detalles
+                <NuxtLink :to="`/activities/${ev._id}`" class="btn-view-ticket">
+                  Ver Detalle →
                 </NuxtLink>
-                <button class="btn-cancel-ticket">
-                  Cancelar
-                </button>
               </div>
             </article>
           </div>
+          <!-- Si no hay actividades en esa pestaña -->
+          <div v-else class="empty-state">
+            <p>No tienes actividades en esta sección.</p>
+          </div>
+
         </main>
 
         <!-- Columna Derecha: Sidebar con Avisos y Accesos Rápidos -->
@@ -138,34 +203,28 @@ const { logout } = useAuth()
           <!-- Tarjeta de Notificaciones / Avisos -->
           <div class="sidebar-card">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-              <h3 class="sidebar-card-title" style="margin-bottom: 0;">🔔 Notificaciones</h3>
-              <span class="badge-wip">WIP</span>
+              <h3 class="sidebar-card-title" style="margin-bottom: 0;">🔔 Avisos y Recordatorios</h3>
+              <span v-if="notifications.length > 0" class="badge-status-pwa pwa-online">
+                {{ notifications.length }}
+              </span>
             </div>
-            <div class="notice-list">
-              <div class="notice-item">
-                <div class="notice-bullet"></div>
+            <div v-if="notifications.length > 0" class="notice-list">
+              <div v-for="notif in notifications" :key="notif._id" class="notice-item" :class="{ 'unread': !notif.read }">
+                <div class="notice-bullet" :style="{ background: notif.read ? '#64748b' : '#38bdf8' }"></div>
                 <div class="notice-body">
-                  <p class="notice-text">Tu inscripción a <strong>Workshop de Nuxt 4</strong> fue confirmada.</p>
-                  <span class="notice-time">Simulación</span>
+                  <p class="notice-text">{{ notif.message }}</p>
+                  <span class="notice-time">⚡ Generado por AWS Lambda</span>
                 </div>
               </div>
             </div>
-          </div>
-
-          <!-- Tarjeta PWA / Offline Status -->
-          <div class="sidebar-card offline-card">
-            <div class="offline-header">
-              <span class="offline-icon">⚡</span>
-              <div>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                  <h4>Modo Offline PWA</h4>
-                  <span class="badge-wip">WIP</span>
+            <div v-else class="notice-list">
+              <div class="notice-item">
+                <div class="notice-bullet" style="background: #10b981;"></div>
+                <div class="notice-body">
+                  <p class="notice-text">¡Estás al día! No tienes recordatorios pendientes por ahora.</p>
+                  <span class="notice-time">Todo en orden</span>
                 </div>
-                <p>En desarrollo: Sincronización offline con IndexedDB.</p>
               </div>
-            </div>
-            <div class="offline-badge">
-              <span>🚧 Módulo PWA en Construcción</span>
             </div>
           </div>
 
@@ -173,7 +232,7 @@ const { logout } = useAuth()
           <div class="sidebar-card">
             <h3 class="sidebar-card-title">🚀 Accesos Rápidos</h3>
             <div class="quick-links">
-              <NuxtLink to="/actividades" class="quick-link-item">
+              <NuxtLink to="/activities" class="quick-link-item">
                 <span>🔍 Explorar Catálogo</span>
                 <span>→</span>
               </NuxtLink>
@@ -463,144 +522,196 @@ const { logout } = useAuth()
   gap: 1rem;
 }
 
-/* Card de Actividad */
-.dashboard-card {
+/* Card de Actividad / Ticket */
+.ticket-card {
   display: flex;
-  align-items: center;
-  gap: 1.5rem;
+  justify-content: space-between;
+  align-items: stretch;
   background: rgba(22, 30, 49, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 1.35rem 1.5rem;
-  backdrop-filter: blur(12px);
-  transition: all 0.2s;
+  border-radius: 18px;
+  overflow: hidden;
+  position: relative;
+  backdrop-filter: blur(16px);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.dashboard-card:hover {
-  border-color: rgba(99, 102, 241, 0.3);
-  transform: translateY(-2px);
+.ticket-card:hover {
+  border-color: rgba(99, 102, 241, 0.35);
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px -10px rgba(0, 0, 0, 0.5), 0 0 20px -5px rgba(99, 102, 241, 0.2);
 }
 
-.event-date-badge {
+.ticket-status-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 5px;
+  background: linear-gradient(180deg, #6366f1 0%, #a855f7 100%);
+}
+
+.ticket-body {
+  padding: 1.5rem 1.75rem 1.5rem 2rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.ticket-top {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.badge-category {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fav-icon-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 58px;
-  height: 64px;
-  background: rgba(99, 102, 241, 0.12);
-  border: 1px solid rgba(99, 102, 241, 0.25);
-  border-radius: 12px;
+  font-size: 1.15rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.event-date-badge .month {
-  font-size: 0.7rem;
-  font-weight: 800;
-  color: #818cf8;
+.fav-icon-btn:hover {
+  transform: scale(1.18);
+  background: rgba(236, 72, 153, 0.18);
+  border-color: rgba(236, 72, 153, 0.4);
 }
 
-.event-date-badge .day {
-  font-size: 1.35rem;
+.event-title {
+  font-size: 1.25rem;
   font-weight: 800;
   color: #f8fafc;
-  line-height: 1;
+  margin-bottom: 0.5rem;
+  line-height: 1.35;
+}
+
+.event-desc-short {
+  font-size: 0.875rem;
+  color: #94a3b8;
+  line-height: 1.55;
+  margin-bottom: 1.1rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .event-details {
-  flex: 1;
-}
-
-.event-tags {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.35rem;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: center;
 }
 
-.tag-category {
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 0.15rem 0.55rem;
-  border-radius: 6px;
-  text-transform: uppercase;
-}
-
-.cat-tech { background: rgba(99, 102, 241, 0.15); color: #a5b4fc; }
-.cat-social { background: rgba(20, 184, 166, 0.15); color: #5eead4; }
-
-.tag-status {
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 0.15rem 0.55rem;
-  border-radius: 6px;
-}
-
-.status-confirmed {
-  background: rgba(16, 185, 129, 0.12);
-  color: #6ee7b7;
-}
-
-.card-event-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #f8fafc;
-  margin-bottom: 0.35rem;
-}
-
-.card-event-meta {
+.detail-row {
   display: flex;
-  gap: 0.4rem;
+  align-items: center;
+  gap: 0.45rem;
   font-size: 0.85rem;
-  color: #94a3b8;
-  margin-bottom: 0.35rem;
-}
-
-.organizer-micro {
-  font-size: 0.8rem;
-  color: #64748b;
-}
-
-.organizer-micro strong {
   color: #cbd5e1;
+}
+
+.detail-icon {
+  font-size: 0.95rem;
 }
 
 .card-side-actions {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  padding: 1.5rem 1.75rem;
+  border-left: 1px dashed rgba(255, 255, 255, 0.08);
+  align-items: stretch;
+  justify-content: center;
+  min-width: 180px;
+  background: rgba(15, 23, 42, 0.3);
 }
 
 .btn-view-ticket {
-  background: rgba(99, 102, 241, 0.15);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  color: #a5b4fc;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
   text-decoration: none;
   font-size: 0.85rem;
   font-weight: 600;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
   text-align: center;
   transition: all 0.2s;
 }
 
 .btn-view-ticket:hover {
-  background: #6366f1;
+  background: rgba(255, 255, 255, 0.12);
   color: white;
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
 }
 
-.btn-cancel {
-  background: transparent;
+.btn-toggle-reg {
   border: none;
-  color: #ef4444;
-  font-size: 0.8rem;
-  font-weight: 500;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
   cursor: pointer;
-  padding: 0.25rem;
-  transition: opacity 0.2s;
+  text-align: center;
+  transition: all 0.2s;
 }
 
-.btn-cancel:hover {
-  opacity: 0.8;
-  text-decoration: underline;
+.btn-register-ticket {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35);
+}
+
+.btn-register-ticket:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.55);
+}
+
+.btn-cancel-ticket {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.btn-cancel-ticket:hover {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3.5rem 2rem;
+  background: rgba(22, 30, 49, 0.5);
+  border: 2px dashed rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.95rem;
 }
 
 /* Columna Derecha (Sidebar) */
@@ -765,15 +876,16 @@ const { logout } = useAuth()
     flex-direction: column;
     align-items: flex-start;
   }
-  .dashboard-card {
+  .ticket-card {
     flex-direction: column;
-    align-items: flex-start;
   }
   .card-side-actions {
     flex-direction: row;
     width: 100%;
+    border-left: none;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
   }
-  .btn-view-ticket {
+  .btn-view-ticket, .btn-toggle-reg {
     flex: 1;
   }
 }

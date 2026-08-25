@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 
+definePageMeta({
+  middleware: 'auth'
+})
+
 const { getEvents, deleteEvent, loading } = useEvents()
 const { logout } = useAuth()
 
@@ -27,6 +31,7 @@ const filteredEvents = computed(() => {
 
 const publishedCount = computed(() => events.value.filter(e => e.status === 'published').length)
 const draftCount = computed(() => events.value.filter(e => e.status === 'draft').length)
+const totalRegistrations = computed(() => events.value.reduce((acc, ev) => acc + (ev.registeredCount || 0), 0))
 
 const handleDelete = async (id: string) => {
   if (confirm('¿Estás seguro de que deseas eliminar esta actividad? Esta acción no se puede deshacer.')) {
@@ -42,6 +47,8 @@ const formatDate = (dateStr: string) => {
   const d = new Date(dateStr)
   return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
+
+
 </script>   
 
 <template>
@@ -96,9 +103,9 @@ const formatDate = (dateStr: string) => {
             <span>👥</span>
           </div>
           <div class="kpi-content">
-            <span class="kpi-value">{{ draftCount }}</span>
-            <span class="kpi-label">Borradores Pendientes</span>
-            <span class="kpi-sub">En edición</span>
+            <span class="kpi-value">{{ totalRegistrations }}</span>
+            <span class="kpi-label">Inscritos Totales</span>
+            <span class="kpi-sub positive">Participantes confirmados</span>
           </div>
         </div>
 
@@ -118,9 +125,9 @@ const formatDate = (dateStr: string) => {
             <span>⚡</span>
           </div>
           <div class="kpi-content">
-            <span class="kpi-value">PWA</span>
-            <span class="kpi-label">Modo Desconectado</span>
-            <span class="kpi-sub" style="color: #facc15;">🚧 En Desarrollo (WIP)</span>
+            <span class="kpi-value">{{ draftCount }}</span>
+            <span class="kpi-label">Borradores Pendientes</span>
+            <span class="kpi-sub">En edición</span>
           </div>
         </div>
       </section>
@@ -199,19 +206,25 @@ const formatDate = (dateStr: string) => {
                 <h3 class="event-title">{{ ev.title }}</h3>
                 <p class="event-loc">📍 {{ ev.location }}</p>
 
-                <!-- Barra de Cupos / Capacidad -->
+                <!-- Barra de Cupos / Capacidad Real -->
                 <div class="capacity-box">
                   <div class="capacity-info">
-                    <span>Capacidad Máxima</span>
-                    <strong>{{ ev.capacity }} cupos disponibles</strong>
+                    <span>Ocupación de Cupos</span>
+                    <strong>{{ ev.registeredCount || 0 }} / {{ ev.capacity }} inscritos</strong>
                   </div>
                   <div class="capacity-track">
-                    <div class="capacity-fill" style="width: 100%;"></div>
+                    <div 
+                      class="capacity-fill" 
+                      :style="{ width: `${Math.min(100, Math.round(((ev.registeredCount || 0) / (ev.capacity || 1)) * 100))}%` }"
+                    ></div>
                   </div>
                 </div>
 
                 <div class="card-actions-row">
-                  <NuxtLink :to="`/actividades/${ev._id}`" class="action-btn btn-view">
+                  <NuxtLink :to="`/managers/${ev._id}`" class="action-btn btn-view" title="Ver métricas y estado del evento">
+                    📊 Gestión & Cupos
+                  </NuxtLink>
+                  <NuxtLink :to="`/activities/${ev._id}`" class="action-btn btn-view">
                     👁️ Ver Público
                   </NuxtLink>
                   <NuxtLink :to="`/managers/edit?id=${ev._id}`" class="action-btn btn-edit">
@@ -242,31 +255,6 @@ const formatDate = (dateStr: string) => {
 
         <!-- Columna Derecha: Sidebar de Gestión y Acciones -->
         <aside class="sidebar-column">
-          <!-- Inscripciones Recientes -->
-          <div class="sidebar-card">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-              <h3 class="sidebar-title" style="margin-bottom: 0;">⚡ Inscripciones</h3>
-              <span class="badge-wip">WIP</span>
-            </div>
-            <div class="activity-stream">
-              <div class="stream-item">
-                <div class="user-avatar-mini">CM</div>
-                <div class="stream-body">
-                  <p class="stream-text"><strong>Carlos Mendoza</strong> se inscribió en <em>Workshop</em>.</p>
-                  <span class="stream-time">Simulación</span>
-                </div>
-              </div>
-
-              <div class="stream-item">
-                <div class="user-avatar-mini mini-pink">LP</div>
-                <div class="stream-body">
-                  <p class="stream-text"><strong>Lucía Peña</strong> se inscribió en <em>Hackathon</em>.</p>
-                  <span class="stream-time">Simulación</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <!-- Automatización Serverless AWS -->
           <div class="sidebar-card serverless-box">
             <div class="serverless-header">
@@ -274,14 +262,14 @@ const formatDate = (dateStr: string) => {
               <div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                   <h4>AWS Lambda</h4>
-                  <span class="badge-wip">WIP</span>
+                  <span class="badge-status-pwa pwa-online">Active</span>
                 </div>
-                <p>Automatizaciones Serverless (En Desarrollo)</p>
+                <p>Automatizaciones Serverless en la Nube</p>
               </div>
             </div>
             <ul class="serverless-features">
-              <li>🚧 Recordatorio automático 24h antes</li>
-              <li>🚧 Cálculo diario de estadísticas</li>
+              <li>✅ Recordatorios automáticos 24h antes</li>
+              <li>✅ Sincronización continua de inscripciones</li>
             </ul>
           </div>
 
@@ -293,7 +281,7 @@ const formatDate = (dateStr: string) => {
                 <span>➕ Publicar Nueva Actividad</span>
                 <span>→</span>
               </NuxtLink>
-              <NuxtLink to="/actividades" class="quick-link-item">
+              <NuxtLink to="/activities" class="quick-link-item">
                 <span>🌐 Ver Portal Público</span>
                 <span>→</span>
               </NuxtLink>

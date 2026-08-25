@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue'
 
+definePageMeta({
+  middleware: 'auth'
+})
+
 const { createEvent, getCategories, loading, error } = useEvents()
 
 const categories = ref<any[]>([])
