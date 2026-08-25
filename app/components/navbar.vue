@@ -1,12 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
-const { token, logout } = useAuth()
+const { token, logout, role } = useAuth()
 const isMobileMenuOpen = ref(false)
 
 const toggleMobileMenu = () => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value
 }
+
+const dashboardLinkPath = computed(() => {
+  if (role.value === 'admin') return '/admins/statistics'
+  if (role.value === 'organizer') return '/managers'
+  if (role.value === 'user') return '/users'
+  return '/'
+})
 </script>
 
 <template>
@@ -23,18 +30,15 @@ const toggleMobileMenu = () => {
       <!-- Desktop Nav Links -->
       <div class="nav-links">
         <NuxtLink to="/" class="nav-item" active-class="active">Inicio</NuxtLink>
-        <NuxtLink to="/actividades" class="nav-item" active-class="active">Explorar Actividades</NuxtLink>
-        <NuxtLink v-if="token" to="/managers" class="nav-item" active-class="active">Dashboard</NuxtLink>
-        <NuxtLink to="/#categorias" class="nav-item">Categorías</NuxtLink>
-        <NuxtLink to="/#pwa-features" class="nav-item">
-          PWA Offline <span class="badge-wip">WIP</span>
-        </NuxtLink>
+        <NuxtLink to="/activities" class="nav-item" active-class="active">Explorar Actividades</NuxtLink>
+        <NuxtLink v-if="token" class="nav-item" active-class="active" :to="dashboardLinkPath">Dashboard</NuxtLink>
       </div>
 
       <!-- Auth Actions -->
       <div class="nav-actions">
         <template v-if="token">
-          <NuxtLink to="/managers" class="btn-dashboard-nav">
+          <!-- Botón 'Mi Panel' exclusivamente para el Administrador -->
+          <NuxtLink v-if="role === 'admin'" to="/admins" class="btn-dashboard-nav">
             ⚡ Mi Panel
           </NuxtLink>
           <button class="btn-ghost btn-logout-nav" @click="logout">
@@ -62,10 +66,9 @@ const toggleMobileMenu = () => {
     <!-- Mobile Dropdown -->
     <div v-if="isMobileMenuOpen" class="mobile-dropdown">
       <NuxtLink to="/" class="mobile-item" @click="isMobileMenuOpen = false">Inicio</NuxtLink>
-      <NuxtLink to="/actividades" class="mobile-item" @click="isMobileMenuOpen = false">Explorar Actividades</NuxtLink>
-      <NuxtLink v-if="token" to="/managers" class="mobile-item" @click="isMobileMenuOpen = false">⚡ Mi Dashboard</NuxtLink>
-      <NuxtLink to="/#categorias" class="mobile-item" @click="isMobileMenuOpen = false">Categorías</NuxtLink>
-      <NuxtLink to="/#pwa-features" class="mobile-item" @click="isMobileMenuOpen = false">PWA Offline (WIP)</NuxtLink>
+      <NuxtLink to="/activities" class="mobile-item" @click="isMobileMenuOpen = false">Explorar Actividades</NuxtLink>
+      <NuxtLink v-if="token" :to="dashboardLinkPath" class="mobile-item" @click="isMobileMenuOpen = false">📊 Dashboard</NuxtLink>
+      <NuxtLink v-if="token && role === 'admin'" to="/admins" class="mobile-item" @click="isMobileMenuOpen = false">⚡ Mi Panel (Admin)</NuxtLink>
       <div class="mobile-auth">
         <template v-if="token">
           <button class="btn-ghost full" @click="logout(); isMobileMenuOpen = false">Cerrar Sesión</button>

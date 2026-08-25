@@ -1,25 +1,4 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-
-const searchQuery = ref('')
-const selectedCategory = ref('all')
-
-const categories = [
-  { id: 'all', name: 'Todas', icon: '✨' },
-  { id: 'tech', name: 'Tecnología', icon: '💻' },
-  { id: 'education', name: 'Educación & Talleres', icon: '📚' },
-  { id: 'sports', name: 'Deportes & Salud', icon: '⚽' },
-  { id: 'culture', name: 'Arte & Cultura', icon: '🎨' },
-  { id: 'social', name: 'Voluntariado', icon: '🌱' }
-]
-
-const handleSearch = () => {
-  if (searchQuery.value.trim()) {
-    navigateTo(`/actividades?q=${encodeURIComponent(searchQuery.value.trim())}`)
-  } else {
-    navigateTo('/actividades')
-  }
-}
 </script>
 
 <template>
@@ -41,26 +20,9 @@ const handleSearch = () => {
           Descubre talleres, eventos tecnológicos, encuentros deportivos y voluntariados. Inscríbete en un click y gestiona tus actividades incluso sin conexión.
         </p>
 
-        <!-- Search Bar Hero -->
-        <div class="search-box">
-          <div class="search-input-wrap">
-            <span class="search-icon">🔍</span>
-            <input
-              v-model="searchQuery"
-              type="text"
-              class="search-input"
-              placeholder="Buscar por taller, tecnología, ubicación..."
-              @keyup.enter="handleSearch"
-            />
-          </div>
-          <button class="btn-search" @click="handleSearch">
-            Buscar Eventos
-          </button>
-        </div>
-
         <!-- Quick CTAs -->
-        <div class="hero-actions">
-          <NuxtLink to="/actividades" class="btn-hero-primary">
+        <div class="hero-actions" style="margin-top: 2rem;">
+          <NuxtLink to="/activities" class="btn-hero-primary">
             Explorar Catálogo <span>→</span>
           </NuxtLink>
           <NuxtLink to="/auth/register" class="btn-hero-secondary">
@@ -81,38 +43,15 @@ const handleSearch = () => {
           </div>
           <div class="stat-divider"></div>
           <div class="stat-item">
-            <span class="stat-num" style="color: #facc15;">WIP</span>
+            <span class="stat-num" style="color: #34d399;">100%</span>
             <span class="stat-lbl">PWA Modo Offline</span>
           </div>
           <div class="stat-divider"></div>
           <div class="stat-item">
-            <span class="stat-num" style="color: #facc15;">WIP</span>
+            <span class="stat-num" style="color: #38bdf8;">Active</span>
             <span class="stat-lbl">AWS Serverless</span>
           </div>
         </div>
-      </div>
-    </section>
-
-    <!-- Categories Section -->
-    <section id="categorias" class="container categories-section">
-      <div class="section-header">
-        <div>
-          <span class="section-tag">Explora por Temáticas</span>
-          <h2 class="section-title">Categorías Populares</h2>
-        </div>
-        <p class="section-desc">Filtra rápidamente las actividades según tus intereses y pasiones.</p>
-      </div>
-
-      <div class="categories-chips">
-        <NuxtLink
-          v-for="cat in categories"
-          :key="cat.id"
-          :to="cat.id === 'all' ? '/actividades' : `/actividades?cat=${cat.id}`"
-          class="category-chip"
-        >
-          <span class="chip-icon">{{ cat.icon }}</span>
-          <span class="chip-name">{{ cat.name }}</span>
-        </NuxtLink>
       </div>
     </section>
 
@@ -130,7 +69,7 @@ const handleSearch = () => {
             <div class="feature-icon">📱</div>
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
               <h3 style="margin-bottom: 0;">Progressive Web App (PWA)</h3>
-              <span class="badge-wip">WIP</span>
+              <span class="badge-status-pwa pwa-online">Ready</span>
             </div>
             <p>
               Instala la aplicación en tu dispositivo móvil o de escritorio. Consulta actividades previamente guardadas en caché incluso cuando pierdas la conexión a Internet.
@@ -141,7 +80,7 @@ const handleSearch = () => {
             <div class="feature-icon">⚡</div>
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
               <h3 style="margin-bottom: 0;">AWS Lambda & Serverless</h3>
-              <span class="badge-wip">WIP</span>
+              <span class="badge-status-pwa pwa-online">Active</span>
             </div>
             <p>
               Microservicios serverless en la nube de Amazon Web Services (AWS) para el envío automatizado de notificaciones de recordatorio y sincronización en segundo plano.

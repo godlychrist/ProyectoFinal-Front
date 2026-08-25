@@ -8,7 +8,9 @@
 
     <!-- Contenido de las páginas -->
     <main class="main-content">
-      <NuxtPage />
+      <NuxtLayout>
+        <NuxtPage />
+      </NuxtLayout>
     </main>
 
     <!-- Footer Global -->
@@ -26,7 +28,7 @@
 
         <div class="footer-links-group">
           <h4>Plataforma</h4>
-          <NuxtLink to="/actividades">Explorar Eventos</NuxtLink>
+          <NuxtLink to="">Explorar Eventos</NuxtLink>
           <NuxtLink to="/auth/register">Registrarse</NuxtLink>
           <NuxtLink to="/auth/login">Iniciar Sesión</NuxtLink>
         </div>
