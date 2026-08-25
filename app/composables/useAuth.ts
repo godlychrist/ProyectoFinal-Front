@@ -5,6 +5,7 @@ export const useAuth = () => {
     const loading = ref(false)
     const error = ref<string | null>(null)
     const tokenCookie = useCookie('auth_token') // Guarda el token en el navegador
+    const roleCookie = useCookie('user_role')
 
 
     const register = async (userData: { name: string, email: string, password: string, role: string }) => {
@@ -40,11 +41,12 @@ export const useAuth = () => {
             // Guarda el token que devolvió el servidor
             if (data?.data?.token) {
                 tokenCookie.value = data.data.token
+                roleCookie.value = data.data.role
             }
 
             return { ok: true, data }
         } catch (err: any) {
-            error.value = err.data?.message || 'Error al iniciar sesion'
+            error.value = err.data?.message || 'El correo electrónico o la contraseña son incorrectos'
             return { ok: false, error: error.value }
         } finally {
             loading.value = false
@@ -53,6 +55,7 @@ export const useAuth = () => {
 
     const logout = () => {
         tokenCookie.value = null
+        roleCookie.value = null
         navigateTo('/auth/login')
     }
 
@@ -62,6 +65,7 @@ export const useAuth = () => {
         logout,
         token: tokenCookie,
         loading,
+        role: roleCookie,
         error
     }
 }
