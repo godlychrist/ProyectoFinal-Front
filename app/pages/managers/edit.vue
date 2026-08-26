@@ -29,8 +29,8 @@ const form = reactive({
 const handleImageChange = (e: any) => {
   const file = e.target.files?.[0]
   if (file) {
-    if (file.size > 5 * 1024 * 1024) {
-      alert('La imagen no debe superar los 5MB')
+    if (file.size > 50 * 1024 * 1024) {
+      alert('La imagen no debe superar los 50MB')
       return
     }
     const reader = new FileReader()

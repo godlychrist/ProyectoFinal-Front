@@ -21,8 +21,8 @@ const clientError = ref<string | null>(null)
 const handleAvatarChange = (e: any) => {
   const file = e.target.files?.[0]
   if (file) {
-    if (file.size > 2 * 1024 * 1024) {
-      clientError.value = 'La foto de perfil no debe superar los 2MB'
+    if (file.size > 25 * 1024 * 1024) {
+      clientError.value = 'La foto de perfil no debe superar los 25MB'
       return
     }
     const reader = new FileReader()
