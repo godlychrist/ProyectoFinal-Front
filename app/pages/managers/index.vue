@@ -6,15 +6,26 @@ definePageMeta({
 })
 
 const { getEvents, deleteEvent, loading } = useEvents()
-const { logout } = useAuth()
+const { logout, userId, userName, userEmail, getMe, role } = useAuth()
 
 const events = ref<any[]>([])
 const selectedFilter = ref('all')
 
 const fetchEvents = async () => {
+  if (!userId.value) {
+    await getMe()
+  }
   const res = await getEvents()
   if (res.ok) {
-    events.value = res.data
+    // Si el usuario es un organizador, solo muestra las actividades creadas por él
+    if (role.value === 'organizer' && userId.value) {
+      events.value = res.data.filter((e: any) => {
+        const orgId = e.organizer?._id || e.organizer
+        return orgId?.toString() === userId.value?.toString()
+      })
+    } else {
+      events.value = res.data
+    }
   }
 }
 
