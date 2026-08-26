@@ -213,6 +213,9 @@ const formatDate = (dateStr: string) => {
         <div v-if="displayedEvents.length > 0" class="catalog-grid">
           <article v-for="ev in displayedEvents" :key="ev._id" class="catalog-card">
               <div class="card-glow-bar"></div>
+              <div v-if="ev.image" class="card-img-banner" style="height: 140px; overflow: hidden; border-radius: 12px 12px 0 0; margin: 0 0 0.5rem 0;">
+                <img :src="ev.image" :alt="ev.title" style="width: 100%; height: 100%; object-fit: cover;" />
+              </div>
               <div class="card-content">
 
                 <div class="card-top">

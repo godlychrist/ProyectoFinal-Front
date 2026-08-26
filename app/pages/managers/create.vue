@@ -17,8 +17,24 @@ const form = reactive({
     startDate: '', 
     endDate: '', 
     capacity: 50, 
-    status: 'published'
+    status: 'published',
+    image: ''
 })
+
+const handleImageChange = (e: any) => {
+  const file = e.target.files?.[0]
+  if (file) {
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen no debe superar los 5MB')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      form.image = reader.result as string
+    }
+    reader.readAsDataURL(file)
+  }
+}
 
 onMounted(async () => {
     const res = await getCategories()
@@ -36,7 +52,8 @@ const handleCreateEvent = async() => {
         startDate: form.startDate,
         endDate: form.endDate,
         capacity: Number(form.capacity),
-        status: form.status || 'published'
+        status: form.status || 'published',
+        image: form.image
     })
 
     if(result.ok) {
@@ -116,6 +133,29 @@ const handleCreateEvent = async() => {
                 class="form-input form-textarea"
                 placeholder="Explica de qué trata la actividad, qué aprenderán los asistentes y qué deben traer..."
               ></textarea>
+            </div>
+
+            <!-- Imagen / Banner del Evento -->
+            <div class="form-group">
+              <label class="form-label" for="event-image">Imagen de la actividad (Opcional)</label>
+              <div style="display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem;">
+                <div v-if="form.image" style="width: 100px; height: 60px; border-radius: 8px; overflow: hidden; border: 1px solid #38bdf8; flex-shrink: 0;">
+                  <img :src="form.image" alt="Preview" style="width: 100%; height: 100%; object-fit: cover;" />
+                </div>
+                <div style="flex: 1;">
+                  <input
+                    id="event-image"
+                    type="file"
+                    accept="image/*"
+                    class="form-input"
+                    style="padding: 0.4rem; font-size: 0.85rem;"
+                    @change="handleImageChange"
+                  />
+                  <small style="color: #94a3b8; font-size: 0.75rem; display: block; margin-top: 0.25rem;">
+                    Sube una foto o banner para ilustrar tu actividad (PNG, JPG o WebP)
+                  </small>
+                </div>
+              </div>
             </div>
           </fieldset>
 

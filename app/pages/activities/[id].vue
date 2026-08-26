@@ -173,6 +173,11 @@ const formatTime = (startStr: string, endStr: string) => {
 
       <!-- 2. Encabezado Principal del Evento -->
       <header class="event-hero-header">
+        <!-- Banner de Imagen del Evento si existe -->
+        <div v-if="event.image" class="event-hero-banner" style="max-height: 320px; border-radius: 16px; overflow: hidden; margin-bottom: 1.75rem; border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);">
+          <img :src="event.image" :alt="event.title" style="width: 100%; height: 100%; max-height: 320px; object-fit: cover;" />
+        </div>
+
         <h1 class="event-hero-title">
           {{ event.title }}
         </h1>

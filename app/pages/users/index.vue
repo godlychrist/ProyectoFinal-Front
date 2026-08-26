@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 
-const { logout, userName, userEmail, getMe } = useAuth()
+const { logout, userName, userEmail, userAvatar, getMe } = useAuth()
 const { getMyRegistrations, getMyFavorites, getMyNotifications, markNotificationAsRead, cancelRegistration, addFavorite, removeFavorite, loading, error } = useEvents()
 const { isOnline } = useNetworkStatus()
 
@@ -103,8 +103,9 @@ definePageMeta({
       <!-- 1. Header / Perfil del Usuario -->
       <header class="profile-hero">
         <div class="profile-main">
-          <div class="profile-avatar">
-            <span class="avatar-letter">C</span>
+          <div class="profile-avatar" style="overflow: hidden;">
+            <img v-if="userAvatar" :src="userAvatar" alt="Foto de Perfil" style="width: 100%; height: 100%; object-fit: cover;" />
+            <span v-else class="avatar-letter">{{ userName ? userName.charAt(0).toUpperCase() : 'U' }}</span>
             <span class="online-indicator" title="En línea"></span>
           </div>
 
@@ -194,6 +195,10 @@ definePageMeta({
                   <button class="fav-icon-btn" @click="toggleFavorite(ev._id)" :title="isFavorite(ev._id) ? 'Quitar de favoritos' : 'Agregar a favoritos'">
                     {{ isFavorite(ev._id) ? '❤️' : '🤍' }}
                   </button>
+                </div>
+                <!-- Banner de Imagen Opcional del Evento -->
+                <div v-if="ev.image" class="ticket-img-banner" style="height: 120px; border-radius: 8px; overflow: hidden; margin-bottom: 0.75rem;">
+                  <img :src="ev.image" :alt="ev.title" style="width: 100%; height: 100%; object-fit: cover;" />
                 </div>
                 <h3 class="event-title">{{ ev.title }}</h3>
                 <p class="event-desc-short">{{ ev.description }}</p>

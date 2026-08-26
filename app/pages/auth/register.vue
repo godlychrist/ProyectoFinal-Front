@@ -10,12 +10,28 @@ const form = reactive ({
   lastname: '',
   email: '',
   role: 'user', 
+  avatar: '',
   password: '',
   confirmPassword: ''
 })
 
 // Variables para errores locales
 const clientError = ref<string | null>(null)
+
+const handleAvatarChange = (e: any) => {
+  const file = e.target.files?.[0]
+  if (file) {
+    if (file.size > 2 * 1024 * 1024) {
+      clientError.value = 'La foto de perfil no debe superar los 2MB'
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      form.avatar = reader.result as string
+    }
+    reader.readAsDataURL(file)
+  }
+}
 
 const handleRegister = async () => {
     clientError.value = null
@@ -34,7 +50,8 @@ const handleRegister = async () => {
         name: `${form.name} ${form.lastname}`.trim(),
         role: form.role,
         email: form.email,
-        password: form.password
+        password: form.password,
+        avatar: form.avatar
     })
     
     if(result.ok) {
@@ -136,6 +153,30 @@ const handleRegister = async () => {
                   </div>
                 </div>
               </label>
+            </div>
+          </div>
+
+          <!-- Foto de Perfil Opcional -->
+          <div class="form-group">
+            <label class="form-label" for="avatar">Foto de perfil (Opcional)</label>
+            <div style="display: flex; align-items: center; gap: 1rem; margin-top: 0.5rem;">
+              <div style="width: 54px; height: 54px; border-radius: 50%; background: #1e293b; border: 2px solid #38bdf8; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                <img v-if="form.avatar" :src="form.avatar" alt="Avatar Preview" style="width: 100%; height: 100%; object-fit: cover;" />
+                <span v-else style="font-size: 1.5rem;">👤</span>
+              </div>
+              <div style="flex: 1;">
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  id="avatar" 
+                  class="form-input" 
+                  style="padding: 0.4rem; font-size: 0.85rem;" 
+                  @change="handleAvatarChange" 
+                />
+                <small style="color: #94a3b8; font-size: 0.75rem; display: block; margin-top: 0.25rem;">
+                  Sube tu foto en formato PNG, JPG o WebP
+                </small>
+              </div>
             </div>
           </div>
 

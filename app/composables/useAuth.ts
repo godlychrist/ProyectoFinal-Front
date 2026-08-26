@@ -9,8 +9,9 @@ export const useAuth = () => {
     const userIdCookie = useCookie('user_id')
     const userEmailCookie = useCookie('user_email')
     const userNameCookie = useCookie('user_name')
+    const userAvatarCookie = useCookie('user_avatar')
 
-    const register = async (userData: { name: string, email: string, password: string, role: string }) => {
+    const register = async (userData: { name: string, email: string, password: string, role: string, avatar?: string }) => {
         loading.value = true
         error.value = null
 
@@ -47,6 +48,7 @@ export const useAuth = () => {
                 userIdCookie.value = data.data.userId
                 userEmailCookie.value = data.data.email
                 userNameCookie.value = data.data.name
+                userAvatarCookie.value = data.data.avatar || ''
             }
 
             return { ok: true, data }
@@ -71,6 +73,7 @@ export const useAuth = () => {
                 userEmailCookie.value = data.data.email
                 userNameCookie.value = data.data.name
                 roleCookie.value = data.data.role
+                userAvatarCookie.value = data.data.avatar || ''
             }
             return { ok: true, data: data?.data }
         } catch (e) {
@@ -84,6 +87,7 @@ export const useAuth = () => {
         userIdCookie.value = null
         userEmailCookie.value = null
         userNameCookie.value = null
+        userAvatarCookie.value = null
         navigateTo('/auth/login')
     }
 
@@ -98,6 +102,7 @@ export const useAuth = () => {
         userId: userIdCookie,
         userEmail: userEmailCookie,
         userName: userNameCookie,
+        userAvatar: userAvatarCookie,
         error
     }
 }
