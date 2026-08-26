@@ -31,13 +31,15 @@ export const useEvents = () => {
         }
     }
 
-    const getEvents = async () => {
+    const getEvents = async (params?: Record<string, any>) => {
         loading.value = true
         error.value = null
         try {
-            const data = await $fetch<any>('http://localhost:4000/api/events')
+            const queryParams = params ? new URLSearchParams(params).toString() : ''
+            const url = queryParams ? `http://localhost:4000/api/events?${queryParams}` : 'http://localhost:4000/api/events'
+            const data = await $fetch<any>(url)
             const eventList = data?.data?.events || data?.data || []
-            if (typeof window !== 'undefined' && eventList.length > 0) {
+            if (typeof window !== 'undefined' && eventList.length > 0 && !queryParams) {
                 localStorage.setItem('communityhub_cached_events', JSON.stringify(eventList))
             }
             return { ok: true, data: eventList, fromCache: false }

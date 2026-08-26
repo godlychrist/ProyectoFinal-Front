@@ -15,7 +15,7 @@ const fetchEvents = async () => {
   if (!userId.value) {
     await getMe()
   }
-  const res = await getEvents()
+  const res = await getEvents({ status: 'all' })
   if (res.ok) {
     // Si el usuario es un organizador, solo muestra las actividades creadas por él
     if (role.value === 'organizer' && userId.value) {
