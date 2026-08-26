@@ -20,6 +20,17 @@ export default defineNuxtConfig({
     }
   },
 
+  // * Reglas de Rutas y Redirecciones oficiales (Soporta /admin/*, /login, /register)
+  routeRules: {
+    '/admin': { redirect: '/admins' },
+    '/admin/users': { redirect: '/admins/users' },
+    '/admin/events': { redirect: '/admins/events' },
+    '/admin/categories': { redirect: '/admins/categories' },
+    '/admin/statistics': { redirect: '/admins/statistics' },
+    '/login': { redirect: '/auth/login' },
+    '/register': { redirect: '/auth/register' },
+  },
+
   // * Registra el modulo de PWA
   modules: [
     '@vite-pwa/nuxt',
