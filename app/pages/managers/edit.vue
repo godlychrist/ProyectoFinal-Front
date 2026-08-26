@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref, computed, onMounted, watch, nextTick } from 'vue'
 
 definePageMeta({
   middleware: 'auth'
@@ -9,8 +9,8 @@ definePageMeta({
 const route = useRoute()
 const { getEventById, updateEvent, getCategories, loading, error } = useEvents()
 
-// 2. Leemos el ID que viene en la URL (ej: /managers/edit?id=66c5a...)
-const eventId = route.query.id as string
+// 2. Leemos el ID que viene en la URL (query o param)
+const eventId = computed(() => ((route.query.id || route.params.id) as string) || '')
 
 const categories = ref<any[]>([])
 
@@ -25,6 +25,23 @@ const form = reactive({
     status: 'published',
     image: ''
 })
+
+// Convierte cualquier formato de fecha a YYYY-MM-DDTHH:mm en hora local para el input datetime-local
+const toLocalDatetimeInput = (dateStr: any) => {
+  if (!dateStr) return ''
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return ''
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    const hours = String(d.getHours()).padStart(2, '0')
+    const minutes = String(d.getMinutes()).padStart(2, '0')
+    return `${year}-${month}-${day}T${hours}:${minutes}`
+  } catch {
+    return ''
+  }
+}
 
 const handleImageChange = async (e: any) => {
   const file = e.target.files?.[0]
@@ -45,34 +62,56 @@ const handleImageChange = async (e: any) => {
   }
 }
 
-// Cargamos categorías y los datos actuales del evento
-onMounted(async () => {
-    // A) Cargamos categorías
+// Carga completa de categorías y datos del evento
+const loadEventData = async () => {
+    // A) Cargamos categorías primero
     const catRes = await getCategories()
-    if (catRes.ok) categories.value = catRes.data
+    if (catRes.ok && Array.isArray(catRes.data)) {
+      categories.value = catRes.data
+    }
 
     // B) Cargamos el evento actual por su ID si existe
-    if (eventId) {
-        const res = await getEventById(eventId)
+    const id = eventId.value
+    if (id) {
+        const res = await getEventById(id)
         if (res.ok && res.data) {
             const ev = res.data
-            form.title = ev.title
-            form.description = ev.description
-            form.category = ev.category?._id || ev.category
-            form.location = ev.location
-            form.capacity = ev.capacity
-            form.status = ev.status
+            form.title = ev.title || ''
+            form.description = ev.description || ''
+            form.location = ev.location || ''
+            form.capacity = typeof ev.capacity === 'number' ? ev.capacity : 50
+            form.status = ev.status || 'published'
             form.image = ev.image || ''
-            
-            // Formateamos las fechas al formato de datetime-local (YYYY-MM-DDTHH:mm):
-            if (ev.startDate) form.startDate = new Date(ev.startDate).toISOString().slice(0, 16)
-            if (ev.endDate) form.endDate = new Date(ev.endDate).toISOString().slice(0, 16)
+            form.startDate = toLocalDatetimeInput(ev.startDate)
+            form.endDate = toLocalDatetimeInput(ev.endDate)
+
+            // Asignar categoría asegurando que coincida con el <select>
+            const catId = typeof ev.category === 'object' && ev.category !== null 
+              ? (ev.category._id || ev.category.id) 
+              : ev.category
+
+            await nextTick()
+            form.category = catId ? catId.toString() : ''
         }
     }
+}
+
+onMounted(async () => {
+    await loadEventData()
+})
+
+watch(() => eventId.value, async (newId) => {
+    if (newId) await loadEventData()
 })
 
 const handleUpdateEvent = async () => {
-    const result = await updateEvent(eventId, {
+    const id = eventId.value
+    if (!id) {
+        alert('No se encontró el ID de la actividad a editar')
+        return
+    }
+
+    const result = await updateEvent(id, {
         title: form.title,
         description: form.description,
         category: form.category,
@@ -86,6 +125,8 @@ const handleUpdateEvent = async () => {
 
     if (result.ok) {
         navigateTo('/managers') // 👈 Vuelve al panel
+    } else {
+        alert(result.error || 'Error al actualizar la actividad')
     }
 }
 </script>
@@ -273,6 +314,8 @@ const handleUpdateEvent = async () => {
                   <select id="status" class="form-input form-select" v-model="form.status">
                     <option value="published">🚀 Publicada</option>
                     <option value="draft">📝 Guardar como borrador</option>
+                    <option value="cancelled">🚫 Cancelada</option>
+                    <option value="completed">🏁 Finalizada</option>
                   </select>
                 </div>
               </div>
