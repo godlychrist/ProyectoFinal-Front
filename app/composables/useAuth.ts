@@ -77,6 +77,18 @@ export const useAuth = () => {
             }
             return { ok: true, data: data?.data }
         } catch (e) {
+            if (userIdCookie.value) {
+                return {
+                    ok: true,
+                    data: {
+                        userId: userIdCookie.value,
+                        name: userNameCookie.value,
+                        email: userEmailCookie.value,
+                        role: roleCookie.value,
+                        avatar: userAvatarCookie.value
+                    }
+                }
+            }
             return { ok: false }
         }
     }

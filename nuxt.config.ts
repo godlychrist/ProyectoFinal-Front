@@ -88,12 +88,18 @@ export default defineNuxtConfig({
       ]
     },
     workbox: {
-      navigateFallback: '/'
+      navigateFallback: '/',
+      globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2}']
+    },
+    client: {
+      installPrompt: true
     },
     devOptions: {
       enabled: true,
+      suppressWarnings: true,
+      navigateFallbackAllowlist: [/^\/$/],
       type: 'module'
-    },
+    }
 
 
   }

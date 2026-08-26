@@ -308,8 +308,21 @@ export const useEvents = () => {
                     Authorization: `Bearer ${tokenCookie.value}`
                 }
             })
-            return { ok: true, data: data?.data?.registrations || [] }
+            const list = data?.data?.registrations || []
+            if (typeof window !== 'undefined' && list.length > 0) {
+                localStorage.setItem('communityhub_cached_my_registrations', JSON.stringify(list))
+            }
+            return { ok: true, data: list }
         } catch (err: any) {
+            // Fallback Offline: mostrar inscripciones cacheadas
+            if (typeof window !== 'undefined') {
+                const cached = localStorage.getItem('communityhub_cached_my_registrations')
+                if (cached) {
+                    try {
+                        return { ok: true, data: JSON.parse(cached), fromCache: true }
+                    } catch (e) {}
+                }
+            }
             return { ok: false, error: err.data?.message, data: [] }
         }
     }
@@ -344,7 +357,7 @@ export const useEvents = () => {
         }
     }
 
-    // Traer mis favoritos desde la BD
+    // Traer mis favoritos desde la BD con soporte offline
     const getMyFavorites = async () => {
         try {
             const data = await $fetch<any>('http://localhost:4000/api/users/me/favorites', {
@@ -352,8 +365,21 @@ export const useEvents = () => {
                     Authorization: `Bearer ${tokenCookie.value}`
                 }
             })
-            return { ok: true, data: data?.data?.favorites || [] }
+            const list = data?.data?.favorites || []
+            if (typeof window !== 'undefined' && list.length > 0) {
+                localStorage.setItem('communityhub_cached_my_favorites', JSON.stringify(list))
+            }
+            return { ok: true, data: list }
         } catch (err: any) {
+            // Fallback Offline: mostrar favoritos cacheados
+            if (typeof window !== 'undefined') {
+                const cached = localStorage.getItem('communityhub_cached_my_favorites')
+                if (cached) {
+                    try {
+                        return { ok: true, data: JSON.parse(cached), fromCache: true }
+                    } catch (e) {}
+                }
+            }
             return { ok: false, error: err.data?.message, data: [] }
         }
     }
