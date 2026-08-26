@@ -18,18 +18,22 @@ const form = reactive ({
 // Variables para errores locales
 const clientError = ref<string | null>(null)
 
-const handleAvatarChange = (e: any) => {
+const handleAvatarChange = async (e: any) => {
   const file = e.target.files?.[0]
   if (file) {
-    if (file.size > 25 * 1024 * 1024) {
-      clientError.value = 'La foto de perfil no debe superar los 25MB'
+    if (file.size > 50 * 1024 * 1024) {
+      clientError.value = 'La foto de perfil no debe superar los 50MB'
       return
     }
-    const reader = new FileReader()
-    reader.onload = () => {
-      form.avatar = reader.result as string
+    try {
+      form.avatar = await compressImage(file, 600, 600, 0.88)
+    } catch {
+      const reader = new FileReader()
+      reader.onload = () => {
+        form.avatar = reader.result as string
+      }
+      reader.readAsDataURL(file)
     }
-    reader.readAsDataURL(file)
   }
 }
 

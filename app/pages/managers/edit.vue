@@ -26,18 +26,22 @@ const form = reactive({
     image: ''
 })
 
-const handleImageChange = (e: any) => {
+const handleImageChange = async (e: any) => {
   const file = e.target.files?.[0]
   if (file) {
     if (file.size > 50 * 1024 * 1024) {
       alert('La imagen no debe superar los 50MB')
       return
     }
-    const reader = new FileReader()
-    reader.onload = () => {
-      form.image = reader.result as string
+    try {
+      form.image = await compressImage(file, 1600, 1200, 0.85)
+    } catch {
+      const reader = new FileReader()
+      reader.onload = () => {
+        form.image = reader.result as string
+      }
+      reader.readAsDataURL(file)
     }
-    reader.readAsDataURL(file)
   }
 }
 
