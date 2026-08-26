@@ -12,12 +12,19 @@ const { getEventById, loading, error,
   getMyFavorites,
 
  } = useEvents()
+const { userId, getMe } = useAuth()
 
 const favorites = useCookie<string[]>('user_favorites', { default: () => [] })
 const registeredEvents = useCookie<string[]>('user_registered_events', { default: () => [] })
 
 const eventId = route.params.id as string
 const event = ref<any>(null)
+
+const isOwner = computed(() => {
+  if (!event.value || !userId.value) return false
+  const orgId = event.value.organizer?._id || event.value.organizer
+  return orgId?.toString() === userId.value?.toString()
+})
 
 // 1. Cargar evento por ID
 onMounted(async () => {
@@ -290,7 +297,14 @@ const formatTime = (startStr: string, endStr: string) => {
 
               <!-- Botón Principal de Acción -->
               <div class="booking-actions">
+                <div v-if="isOwner" class="owner-badge-box" style="padding: 1.1rem; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; text-align: center; color: #38bdf8; font-weight: 600;">
+                  🎯 Eres el organizador de este evento
+                  <div style="font-size: 0.85rem; font-weight: normal; margin-top: 0.3rem; opacity: 0.85; color: #94a3b8;">
+                    No es necesario inscribirte a tus propias actividades comunitarias.
+                  </div>
+                </div>
                 <button 
+                  v-else
                   :disabled="!registeredEvents.includes(event._id) && (event.registeredCount || 0) >= event.capacity"
                   :class="registeredEvents.includes(event._id) ? 'btn-cancel-action' : 'btn-register-action'"
                   @click="toggleRegistration"

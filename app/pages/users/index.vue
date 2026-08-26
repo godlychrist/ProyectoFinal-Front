@@ -1,63 +1,56 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 
-const { logout } = useAuth()
-const { getEvents, getMyNotifications, markNotificationAsRead, loading, error } = useEvents()
+const { logout, userName, userEmail, getMe } = useAuth()
+const { getMyRegistrations, getMyFavorites, getMyNotifications, markNotificationAsRead, loading, error } = useEvents()
 const { isOnline } = useNetworkStatus()
-const events = ref<any[]>([])
+
+const registeredEvents = ref<any[]>([])
+const favoriteEvents = ref<any[]>([])
 const notifications = ref<any[]>([])
 
-const loadNotifications = async () => {
-  const res = await getMyNotifications()
-  if (res.ok) {
-    notifications.value = res.data
+// 1. Estado de la pestaña activa ('registered' = Mis Inscripciones, 'favorites' = Guardadas)
+const selectedTab = ref('registered')
+
+// 2. Cargar datos del usuario
+const loadUserData = async () => {
+  await getMe()
+  const [regsRes, favsRes, notifsRes] = await Promise.all([
+    getMyRegistrations(),
+    getMyFavorites(),
+    getMyNotifications()
+  ])
+
+  if (regsRes.ok && Array.isArray(regsRes.data)) {
+    registeredEvents.value = regsRes.data.map((r: any) => r.event).filter(Boolean)
+  }
+  if (favsRes.ok && Array.isArray(favsRes.data)) {
+    favoriteEvents.value = favsRes.data.map((f: any) => f.event).filter(Boolean)
+  }
+  if (notifsRes.ok && Array.isArray(notifsRes.data)) {
+    notifications.value = notifsRes.data
   }
 }
 
-onMounted(async() => {
-  const res = await getEvents()
-  if(res.ok) {
-    events.value = res.data
-  }
-  await loadNotifications()
+onMounted(async () => {
+  await loadUserData()
 })
 
-// 1. Guardamos los IDs de favoritos e inscripciones en cookies reactivas
-const favorites = useCookie<string[]>('user_favorites', { default: () => [] })
-const registeredEvents = useCookie<string[]>('user_registered_events', { default: () => [] })
-
-// 2. Estado de la pestaña activa ('all' = Todas, 'registered' = Mis Inscripciones, 'favorites' = Guardadas)
-const selectedTab = ref('all')
-
-// 3. Función para dar/quitar Favorito
-const toggleFavorite = (eventId: string) => {
-  const index = favorites.value.indexOf(eventId)
-  if (index === -1) {
-    favorites.value.push(eventId)
-  } else {
-    favorites.value.splice(index, 1)
-  }
-}
-
-// 5. Lista filtrada según la pestaña que el usuario presione
+// 3. Lista filtrada: Solo actividades a las que está inscrito o favoritos
 const displayedEvents = computed(() => {
-  if (selectedTab.value === 'registered') {
-    return events.value.filter(e => registeredEvents.value.includes(e._id))
-  }
   if (selectedTab.value === 'favorites') {
-    return events.value.filter(e => favorites.value.includes(e._id))
+    return favoriteEvents.value
   }
-  return events.value
+  return registeredEvents.value
 })
 
-// 6. Formatear fechas
+// 4. Formatear fechas
 const formatDate = (dateStr: string) => {
   if (!dateStr) return 'Sin fecha'
   return new Date(dateStr).toLocaleDateString('es-ES', { 
     day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' 
   })
 }
-
 
 definePageMeta({
   middleware: 'auth'
@@ -85,14 +78,14 @@ definePageMeta({
               <span class="role-pill">🙋‍♂️ Participante</span>
               <span class="status-pill">Cuenta Activa</span>
             </div>
-            <h1 class="user-name">¡Hola de nuevo, <span class="text-gradient">Carlos Mendoza</span>! 👋</h1>
-            <p class="user-email">carlos.mendoza@correo.com</p>
+            <h1 class="user-name">¡Hola de nuevo, <span class="text-gradient">{{ userName || 'Participante' }}</span>! 👋</h1>
+            <p class="user-email">{{ userEmail || 'usuario@correo.com' }}</p>
           </div>
         </div>
 
         <div class="profile-actions">
           <NuxtLink to="/activities" class="btn-primary-action">
-            <span>Explorar Actividades</span>
+            <span>Explorar Catálogo</span>
             <span>→</span>
           </NuxtLink>
           <button class="btn-secondary-action" @click="logout">
@@ -118,18 +111,18 @@ definePageMeta({
             <span>❤️</span>
           </div>
           <div class="stat-data">
-            <span class="stat-value">{{ favorites.length }}</span>
+            <span class="stat-value">{{ favoriteEvents.length }}</span>
             <span class="stat-label">Eventos Favoritos</span>
           </div>
         </div>
 
         <div class="stat-card">
           <div class="stat-icon-wrap icon-blue">
-            <span>📅</span>
+            <span>🔔</span>
           </div>
           <div class="stat-data">
-            <span class="stat-value">{{ events.length }}</span>
-            <span class="stat-label">Actividades Disponibles</span>
+            <span class="stat-value">{{ notifications.length }}</span>
+            <span class="stat-label">Avisos y Notificaciones</span>
           </div>
         </div>
       </section>
@@ -141,17 +134,14 @@ definePageMeta({
           <div class="section-title-bar">
             <div>
               <span class="sub-tag">Tu Agenda</span>
-              <h2 class="block-title">Mis Próximas Actividades</h2>
+              <h2 class="block-title">Mis Actividades Comunitarias</h2>
             </div>
           <div class="filter-tabs">
-              <button :class="['tab-btn', { active: selectedTab === 'all' }]" @click="selectedTab = 'all'">
-                Todas ({{ events.length }})
-              </button>
               <button :class="['tab-btn', { active: selectedTab === 'registered' }]" @click="selectedTab = 'registered'">
-                Mis Inscripciones ({{ registeredEvents.length }})
+                🎟️ Mis Inscripciones ({{ registeredEvents.length }})
               </button>
               <button :class="['tab-btn', { active: selectedTab === 'favorites' }]" @click="selectedTab = 'favorites'">
-                Favoritos ({{ favorites.length }})
+                ❤️ Favoritos ({{ favoriteEvents.length }})
               </button>
           </div>
           </div>
@@ -192,8 +182,22 @@ definePageMeta({
             </article>
           </div>
           <!-- Si no hay actividades en esa pestaña -->
-          <div v-else class="empty-state">
-            <p>No tienes actividades en esta sección.</p>
+          <div v-else class="empty-state" style="text-align: center; padding: 3rem 1.5rem; background: rgba(255, 255, 255, 0.02); border: 1px dashed rgba(255, 255, 255, 0.1); border-radius: 16px;">
+            <div style="font-size: 2.8rem; margin-bottom: 0.75rem;">
+              {{ selectedTab === 'registered' ? '🎟️' : '❤️' }}
+            </div>
+            <h3 style="font-size: 1.25rem; font-weight: 600; color: #f8fafc; margin-bottom: 0.5rem;">
+              {{ selectedTab === 'registered' ? 'No tienes actividades inscritas aún' : 'No tienes favoritos guardados' }}
+            </h3>
+            <p style="color: #94a3b8; max-width: 420px; margin: 0 auto 1.5rem; font-size: 0.95rem;">
+              {{ selectedTab === 'registered' 
+                ? 'Explora las actividades comunitarias disponibles e inscríbete para ver tus boletos y recordatorios aquí.' 
+                : 'Marca actividades con el corazón para tenerlas siempre a mano en esta sección.' }}
+            </p>
+            <NuxtLink to="/activities" class="btn-primary-action" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+              <span>Explorar Catálogo de Actividades</span>
+              <span>→</span>
+            </NuxtLink>
           </div>
 
         </main>
