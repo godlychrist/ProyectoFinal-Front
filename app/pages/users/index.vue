@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 
 const { logout, userName, userEmail, getMe } = useAuth()
-const { getMyRegistrations, getMyFavorites, getMyNotifications, markNotificationAsRead, loading, error } = useEvents()
+const { getMyRegistrations, getMyFavorites, getMyNotifications, markNotificationAsRead, cancelRegistration, addFavorite, removeFavorite, loading, error } = useEvents()
 const { isOnline } = useNetworkStatus()
 
 const registeredEvents = ref<any[]>([])
@@ -36,7 +36,44 @@ onMounted(async () => {
   await loadUserData()
 })
 
-// 3. Lista filtrada: Solo actividades a las que está inscrito o favoritos
+// 3. Helper para saber si un evento está en favoritos
+const isFavorite = (id: string) => {
+  return favoriteEvents.value.some((f: any) => (f._id || f) === id)
+}
+
+// 4. Toggle Favorito
+const toggleFavorite = async (eventId: string) => {
+  if (isFavorite(eventId)) {
+    const res = await removeFavorite(eventId)
+    if (res.ok) {
+      favoriteEvents.value = favoriteEvents.value.filter((f: any) => (f._id || f) !== eventId)
+    }
+  } else {
+    const res = await addFavorite(eventId)
+    if (res.ok) {
+      const found = registeredEvents.value.find((r: any) => (r._id || r) === eventId)
+      if (found) {
+        favoriteEvents.value.push(found)
+      } else {
+        await loadUserData()
+      }
+    }
+  }
+}
+
+// 5. Cancelar Inscripción
+const handleCancelRegistration = async (eventId: string) => {
+  if (confirm('¿Estás seguro de que deseas cancelar tu inscripción a esta actividad?')) {
+    const res = await cancelRegistration(eventId)
+    if (res.ok) {
+      registeredEvents.value = registeredEvents.value.filter((r: any) => (r._id || r) !== eventId)
+    } else {
+      alert(res.error || 'Error al cancelar la inscripción')
+    }
+  }
+}
+
+// 6. Lista filtrada: Solo actividades a las que está inscrito o favoritos
 const displayedEvents = computed(() => {
   if (selectedTab.value === 'favorites') {
     return favoriteEvents.value
@@ -44,7 +81,7 @@ const displayedEvents = computed(() => {
   return registeredEvents.value
 })
 
-// 4. Formatear fechas
+// 7. Formatear fechas
 const formatDate = (dateStr: string) => {
   if (!dateStr) return 'Sin fecha'
   return new Date(dateStr).toLocaleDateString('es-ES', { 
@@ -55,8 +92,6 @@ const formatDate = (dateStr: string) => {
 definePageMeta({
   middleware: 'auth'
 })
-
-
 </script>
 
 <template>
@@ -156,8 +191,8 @@ definePageMeta({
                   <span class="badge-category">{{ ev.category?.name || 'Comunidad' }}</span>
                   
                   <!-- Botón de Favorito ❤️ -->
-                  <button class="fav-icon-btn" @click="toggleFavorite(ev._id)">
-                    {{ favorites.includes(ev._id) ? '❤️' : '🤍' }}
+                  <button class="fav-icon-btn" @click="toggleFavorite(ev._id)" :title="isFavorite(ev._id) ? 'Quitar de favoritos' : 'Agregar a favoritos'">
+                    {{ isFavorite(ev._id) ? '❤️' : '🤍' }}
                   </button>
                 </div>
                 <h3 class="event-title">{{ ev.title }}</h3>
@@ -178,6 +213,13 @@ definePageMeta({
                 <NuxtLink :to="`/activities/${ev._id}`" class="btn-view-ticket">
                   Ver Detalle →
                 </NuxtLink>
+                <button 
+                  v-if="selectedTab === 'registered'"
+                  class="btn-cancel-sub"
+                  @click="handleCancelRegistration(ev._id)"
+                >
+                  Cancelar Boleto
+                </button>
               </div>
             </article>
           </div>
@@ -867,6 +909,56 @@ definePageMeta({
   padding: 0.15rem 0.45rem;
   border-radius: 6px;
   vertical-align: middle;
+}
+
+.card-side-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border-left: 1px dashed rgba(255, 255, 255, 0.08);
+  min-width: 150px;
+}
+
+.btn-view-ticket {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1rem;
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.btn-view-ticket:hover {
+  background: rgba(99, 102, 241, 0.25);
+  color: #fff;
+  border-color: #818cf8;
+}
+
+.btn-cancel-sub {
+  padding: 0.5rem 1rem;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel-sub:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #fff;
 }
 
 @media (max-width: 968px) {

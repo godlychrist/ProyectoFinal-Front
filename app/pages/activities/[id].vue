@@ -97,12 +97,16 @@ const toggleRegistration = async () => {
       const idx = registeredEvents.value.indexOf(id)
       if (idx !== -1) registeredEvents.value.splice(idx, 1)
       if (event.value.registeredCount > 0) event.value.registeredCount--
+    } else {
+      alert(res.error || 'Error al cancelar la inscripción')
     }
   } else {
     const res = await registerForEvent(id)
     if (res.ok) {
       registeredEvents.value.push(id)
       event.value.registeredCount = (event.value.registeredCount || 0) + 1
+    } else {
+      alert(res.error || 'Error al inscribirse a este evento')
     }
   }
 }
