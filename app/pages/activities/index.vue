@@ -2,34 +2,11 @@
 import { ref, onMounted, computed, watch } from 'vue'
 
 const { logout } = useAuth()
-const tokenCookie = useCookie('auth_token')
-const { getEvents, getFilteredEvents, loading, error, getCategories, addFavorite, removeFavorite, getMyFavorites } = useEvents()
+const { getEvents, getFilteredEvents, loading, error, getCategories } = useEvents()
 
 const categories = ref<any[]>([])
 const events = ref<any[]>([])
 const allOrganizers = ref<any[]>([])
-const favorites = ref<string[]>([])
-
-const isFavorite = (id: string) => favorites.value.includes(id)
-
-const toggleFavorite = async (eventId: string) => {
-  if (!tokenCookie.value) {
-    navigateTo('/auth/login')
-    return
-  }
-
-  if (isFavorite(eventId)) {
-    const res = await removeFavorite(eventId)
-    if (res.ok) {
-      favorites.value = favorites.value.filter(id => id !== eventId)
-    }
-  } else {
-    const res = await addFavorite(eventId)
-    if (res.ok) {
-      favorites.value.push(eventId)
-    }
-  }
-}
 
 // Variables de filtros
 const searchQuery = ref('')
@@ -105,13 +82,6 @@ onMounted(async () => {
   }
 
   if (catsRes.ok) categories.value = catsRes.data
-
-  if (tokenCookie.value) {
-    const favsRes = await getMyFavorites()
-    if (favsRes.ok && Array.isArray(favsRes.data)) {
-      favorites.value = favsRes.data.map((f: any) => f.event?._id || f.event)
-    }
-  }
 })
 
 const formatDate = (dateStr: string) => {
@@ -250,22 +220,12 @@ const formatDate = (dateStr: string) => {
 
                 <div class="card-top">
                   <span class="card-category cat-tech">{{ ev.category?.name || 'Comunidad' }}</span>
-                  <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span 
-                      class="card-status-badge"
-                      :class="(ev.registeredCount || 0) >= ev.capacity ? 'badge-full' : 'badge-open'"
-                    >
-                      {{ (ev.registeredCount || 0) >= ev.capacity ? '🔴 Cupos Agotados' : '🟢 Cupos Abiertos' }}
-                    </span>
-                    <button 
-                      class="fav-icon-btn" 
-                      style="width: 32px; height: 32px; font-size: 1rem;"
-                      :title="isFavorite(ev._id) ? 'Quitar de favoritos' : 'Guardar en favoritos'"
-                      @click.prevent.stop="toggleFavorite(ev._id)"
-                    >
-                      {{ isFavorite(ev._id) ? '❤️' : '🤍' }}
-                    </button>
-                  </div>
+                  <span 
+                    class="card-status-badge"
+                    :class="(ev.registeredCount || 0) >= ev.capacity ? 'badge-full' : 'badge-open'"
+                  >
+                    {{ (ev.registeredCount || 0) >= ev.capacity ? '🔴 Cupos Agotados' : '🟢 Cupos Abiertos' }}
+                  </span>
                 </div>
 
                 <h3 class="card-title">{{ ev.title }}</h3>
